@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Tool</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>AI Text Assistant</h1>
+        
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <label class="toggle-option">
+                <input type="radio" name="mode" value="generate" checked>
+                <span class="toggle-label">Text Generation</span>
+            </label>
+            <label class="toggle-option">
+                <input type="radio" name="mode" value="summarize">
+                <span class="toggle-label">Text Summarization</span>
+            </label>
+        </div>
+
+        <div class="input-section">
+            <label for="textInput">Your Prompt:</label>
+            <textarea id="textInput" rows="6" placeholder="Enter your prompt..."></textarea>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="maxTokens">Max Tokens:</label>
+                    <input type="number" id="maxTokens" value="150" min="10" max="500">
+                </div>
+                
+                <div class="control-group">
+                    <label for="doSample">
+                        <input type="checkbox" id="doSample">
+                        Enable Sampling
+                    </label>
+                </div>
+            </div>
+            
+            <button id="generateButton">Process</button>
+        </div>
+        
+        <div class="output-section">
+            <h2>Output:</h2>
+            <div id="output" class="output-box">Your result will appear here...</div>
+        </div>
+    </div>
+    
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

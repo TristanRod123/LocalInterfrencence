@@ -37,6 +37,69 @@ const generateText = async () => {
     }
 };
 
+const predictNext = async () => {
+    const textInput = document.getElementById("textInput").value;
+    
+    if (!textInput.trim()) {
+        alert("Please enter some text first!");
+        return;
+    }
+
+    // Show loading state
+    const predictionsElement = document.getElementById("predictions");
+    predictionsElement.innerHTML = "Loading predictions...";
+
+    try {
+        const response = await fetch("/predict_next", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                text: textInput,
+            }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            displayPredictions(data.predictions);
+        } else {
+            predictionsElement.innerHTML = "Error: Unable to get predictions.";
+        }
+    } catch (error) {
+        predictionsElement.innerHTML = "Error: " + error.message;
+    }
+};
+
+const displayPredictions = (predictions) => {
+    const predictionsElement = document.getElementById("predictions");
+    
+    if (predictions.length === 0) {
+        predictionsElement.innerHTML = "No predictions available.";
+        return;
+    }
+
+    let html = '<div class="predictions-list">';
+    predictions.forEach((pred, index) => {
+        const barWidth = pred.probability;
+        html += `
+            <div class="prediction-item">
+                <div class="prediction-header">
+                    <span class="prediction-rank">#${index + 1}</span>
+                    <span class="prediction-token">"${pred.token}"</span>
+                    <span class="prediction-probability">${pred.probability}%</span>
+                </div>
+                <div class="prediction-bar-container">
+                    <div class="prediction-bar" style="width: ${barWidth}%"></div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    predictionsElement.innerHTML = html;
+};
+
 // Update UI based on selected mode
 const updateModeUI = () => {
     const mode = document.querySelector('input[name="mode"]:checked').value;
@@ -53,6 +116,7 @@ const updateModeUI = () => {
 };
 
 document.getElementById("generateButton").addEventListener("click", generateText);
+document.getElementById("predictButton").addEventListener("click", predictNext);
 document.querySelectorAll('input[name="mode"]').forEach(radio => {
     radio.addEventListener("change", updateModeUI);
 });

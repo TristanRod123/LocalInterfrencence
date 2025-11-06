@@ -2,13 +2,18 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import torch
 import uvicorn
+import os
 
 app = FastAPI()
 
-# Load both models
-generator_pipe = pipeline("text-generation", model="Qwen/Qwen2.5-0.5B-Instruct")
+# Load models and tokenizer
+model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+generator_pipe = pipeline("text-generation", model=model_name, tokenizer=tokenizer)
 summarizer_pipe = pipeline("summarization", model="facebook/bart-large-cnn")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -46,17 +51,30 @@ def generate(req: GenRequest):
         )
         return {"generated_text": out[0]["generated_text"]}
 
+@app.post("/predict_next")
+def predict_next(req: GenRequest):
+    """Get top predictions for next word/token"""
+    inputs = tokenizer(req.text, return_tensors="pt")
+    
+    with torch.no_grad():
+        outputs = model(**inputs)
+        next_token_logits = outputs.logits[0, -1, :]
+        
+        # Get top 10 predictions
+        top_k = 10
+        probs = torch.softmax(next_token_logits, dim=-1)
+        top_probs, top_indices = torch.topk(probs, top_k)
+        
+        predictions = []
+        for prob, idx in zip(top_probs.tolist(), top_indices.tolist()):
+            token = tokenizer.decode([idx])
+            predictions.append({
+                "token": token,
+                "probability": round(prob * 100, 2)
+            })
+    
+    return {"predictions": predictions}
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-# curl -sS -i http://127.0.0.1:8000/generate \
-#   -H "Content-Type: application/json" \
-#   --data '{"text":"Hello","max_new_tokens":20}'
-
-# curl -sS -i -L "https://<NAME>-8000.app.github.dev/generate" \
-#   -H "Content-Type: application/json" \
-#   --data '{"text":"What is the capital of France?","max_new_tokens":32}'
-
-# curl -sS -i -L "https://verbose-space-lamp-697x5775rr5h7xg-8000.app.github.dev/generate" \
-#   -H "Content-Type: application/json" \
-#   --data '{"text":"What is the capital of France?","max_new_tokens":32}'
+    port = int(os.environ.get("PORT", 7860))
+    uvicorn.run(app, host="0.0.0.0", port=port)
